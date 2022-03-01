@@ -1,7 +1,43 @@
+/// The PTCL number of TCP.
 const PTCL: u8 = 6;
+/// The PTCL number of TCP.
+pub const TCP_PTCL: u8 = PTCL;
 
-pub fn tcp_checksum(header: Vec<u8>, data: Vec<u8>, source_address: u32, destination_address: u32) {
-    // let psuedo_header: [u8; 12] = construct_psuedo_header(source_address, destination_address, tcp_length);
+pub fn tcp_checksum(
+    header: Vec<u8>,
+    data: Vec<u8>,
+    source_address: u32,
+    destination_address: u32
+) {
+    // Create the psuedo header to attach at the begining
+    let header_len: u16 = octets(header.len());
+    let data_len: u16 = octets(data.len());
+    let psuedo_header: [u8; 12] = construct_psuedo_header(
+        source_address,
+        destination_address,
+        header_len,
+        data_len
+    );
+}
+
+/// Count the number of octets in a size.
+///
+/// # Examples
+/// ```
+/// use pokey_checksum::octets;
+///
+/// assert_eq!(octets(63), 8_u16);
+/// ```
+pub fn octets(size: usize) -> u16 {
+    let remainder = size % 8;
+    let octet_count = size / 8; // intentionally floored division
+
+    // Essentially round up if there is a decimal place
+    if remainder != 0 {
+        (octet_count + 1) as u16
+    } else {
+        octet_count as u16
+    }
 }
 
 /// Construct the psuedo header that is included in the checksum.
@@ -27,7 +63,13 @@ pub fn tcp_checksum(header: Vec<u8>, data: Vec<u8>, source_address: u32, destina
 /// ];
 /// assert_eq!(result, expected);
 /// ```
-pub fn construct_psuedo_header(src: u32, dst: u32, header_len: u16, data_len: u16) -> [u8; 12] {
+pub fn construct_psuedo_header(
+    src: u32,
+    dst: u32,
+    header_len: u16,
+    data_len: u16
+) -> [u8; 12] {
+    // Calculate the tcp length for the psuedo header
     let tcp_size: u16 = header_len + data_len;
 
     [
