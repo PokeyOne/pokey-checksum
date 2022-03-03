@@ -10,6 +10,7 @@ const PTCL: u8 = 6;
 /// The PTCL number of TCP.
 pub const TCP_PTCL: u8 = PTCL;
 
+/// Calculate the TCP checksum based on the TCP data provided.
 pub fn tcp_checksum(
     mut header: Vec<u8>,
     mut data: Vec<u8>,
@@ -34,6 +35,9 @@ pub fn tcp_checksum(
         checksum.add_data(ele);
     }
 
+    // TODO: These additions are actually wrong. In the case that both are odd,
+    //       then they would add to be even, which should not have additions.
+    //       Change this to just append both arrays together.
     if header.len() % 2 != 0 {
         header.push(0);
     }
