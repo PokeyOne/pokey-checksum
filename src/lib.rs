@@ -1,43 +1,60 @@
+#[cfg(test)]
+mod tests;
+
+pub mod checksum;
+
+use checksum::Checksum;
+
 /// The PTCL number of TCP.
 const PTCL: u8 = 6;
 /// The PTCL number of TCP.
 pub const TCP_PTCL: u8 = PTCL;
 
 pub fn tcp_checksum(
-    header: Vec<u8>,
-    data: Vec<u8>,
+    mut header: Vec<u8>,
+    mut data: Vec<u8>,
     source_address: u32,
     destination_address: u32
-) {
+) -> u16 {
     // Create the psuedo header to attach at the begining
-    let header_len: u16 = octets(header.len());
-    let data_len: u16 = octets(data.len());
+    let header_len: u16 = header.len() as u16;
+    let data_len: u16 = data.len() as u16;
     let psuedo_header: [u8; 12] = construct_psuedo_header(
         source_address,
         destination_address,
         header_len,
         data_len
     );
-}
+    let mut checksum: Checksum = Checksum::new();
 
-/// Count the number of octets in a size.
-///
-/// # Examples
-/// ```
-/// use pokey_checksum::octets;
-///
-/// assert_eq!(octets(63), 8_u16);
-/// ```
-pub fn octets(size: usize) -> u16 {
-    let remainder = size % 8;
-    let octet_count = size / 8; // intentionally floored division
+    for i in 0..6 {
+        // Calculate the u16 for two bytes
+        let ele: u16 = ((psuedo_header[i*2] as u16) << 8) + psuedo_header[i*2 + 1] as u16;
 
-    // Essentially round up if there is a decimal place
-    if remainder != 0 {
-        (octet_count + 1) as u16
-    } else {
-        octet_count as u16
+        checksum.add_data(ele);
     }
+
+    if header.len() % 2 != 0 {
+        header.push(0);
+    }
+
+    if data.len() % 2 != 0 {
+        data.push(0);
+    }
+
+    for i in 0..(header.len() / 2) {
+        let ele: u16 = ((header[i*2] as u16) << 8) + header[i*2 + 1] as u16;
+
+        checksum.add_data(ele);
+    }
+
+    for i in 0..(data.len() / 2) {
+        let ele: u16 = ((data[i*2] as u16) << 8) + data[i*2 + 1] as u16;
+
+        checksum.add_data(ele);
+    }
+
+    checksum.checksum()
 }
 
 /// Construct the psuedo header that is included in the checksum.
